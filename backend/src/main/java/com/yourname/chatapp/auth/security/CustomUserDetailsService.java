@@ -15,14 +15,14 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
+        // Security context should only load non-deleted users.
+        User user = userRepository.findByUsernameIgnoreCaseAndDeletedFalse(username)
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         return org.springframework.security.core.userdetails.User
             .withUsername(user.getUsername())
-            .password(user.getPassword() == null ? "{noop}password" : user.getPassword())
-            .authorities("USER")
+            .password(user.getPassword() == null ? "" : user.getPassword())
+            .authorities("ROLE_" + (user.getRole() == null || user.getRole().isBlank() ? "USER" : user.getRole().toUpperCase()))
             .build();
     }
 }
-
