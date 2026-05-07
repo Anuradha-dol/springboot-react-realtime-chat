@@ -53,6 +53,7 @@ function avatarLabel(value, fallback = "U") {
 
 function groupAlertMarker(group) {
   if ((group?.mentionAlertKind || "").toLowerCase() === "reply") return "R";
+  if ((group?.mentionAlertKind || "").toLowerCase() === "added") return "+";
   return "@";
 }
 

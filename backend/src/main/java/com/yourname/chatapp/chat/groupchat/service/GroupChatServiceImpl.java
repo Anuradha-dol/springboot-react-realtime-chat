@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.function.Function;
@@ -34,6 +37,7 @@ public class GroupChatServiceImpl implements GroupChatService {
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final TransactionTemplate transactionTemplate;
 
     @Override
     @Transactional
@@ -119,8 +123,19 @@ public class GroupChatServiceImpl implements GroupChatService {
     public void addUsers(Long groupId, AddGroupMembersRequest request) {
         User me = currentUserService.getCurrentUser();
         assertAdmin(groupId, me.getId());
-        addMembers(groupId, request.getUserIds(), me.getId());
-        broadcastGroupState(groupId, "GROUP_UPDATED", me.getId(), null, "Group members updated.");
+        List<User> addedUsers = addMembers(groupId, request.getUserIds(), me.getId());
+        List<Long> addedUserIds = addedUsers.stream().map(User::getId).toList();
+        Long actorUserId = me.getId();
+        String actorName = resolveDisplayName(me);
+
+        runAfterCommitOrNow(() -> transactionTemplate.executeWithoutResult(status -> {
+            GroupChat groupChat = getGroup(groupId);
+            if (!addedUserIds.isEmpty()) {
+                List<User> freshAddedUsers = userRepository.findAllById(addedUserIds);
+                sendGroupAddedEvents(groupChat, freshAddedUsers, actorUserId, actorName);
+            }
+            broadcastGroupState(groupId, "GROUP_UPDATED", actorUserId, null, "Group members updated.");
+        }));
     }
 
     @Override
@@ -253,7 +268,11 @@ public class GroupChatServiceImpl implements GroupChatService {
     @Transactional(readOnly = true)
     public List<GroupMessageResponse> getGroupMessages(Long groupId) {
         User me = currentUserService.getCurrentUser();
-        assertMember(groupId, me.getId());
+        // Client can briefly send a stale groupId after auth/account switch.
+        // Returning an empty message list avoids hard-failing the chat screen.
+        if (!groupMemberRepository.existsByGroupChatIdAndUserId(groupId, me.getId())) {
+            return List.of();
+        }
         return groupMessageRepository.findByGroupChatIdOrderByCreatedAtAsc(groupId)
             .stream()
             .map(message -> toMessageResponse(message, me.getId()))
@@ -516,16 +535,16 @@ public class GroupChatServiceImpl implements GroupChatService {
         groupMemberRepository.flush();
     }
 
-    private void addMembers(Long groupId, List<Long> memberIds, Long actorId) {
+    private List<User> addMembers(Long groupId, List<Long> memberIds, Long actorId) {
         if (memberIds == null || memberIds.isEmpty()) {
-            return;
+            return List.of();
         }
 
         GroupChat groupChat = getGroup(groupId);
         Set<Long> ids = new HashSet<>(memberIds);
         ids.remove(actorId);
         if (ids.isEmpty()) {
-            return;
+            return List.of();
         }
 
         List<User> users = userRepository.findAllById(ids);
@@ -533,6 +552,7 @@ public class GroupChatServiceImpl implements GroupChatService {
             throw new IllegalArgumentException("One or more users do not exist.");
         }
 
+        List<User> addedUsers = new ArrayList<>();
         for (User user : users) {
             if (groupMemberRepository.existsByGroupChatIdAndUserId(groupId, user.getId())) {
                 continue;
@@ -543,7 +563,9 @@ public class GroupChatServiceImpl implements GroupChatService {
                 .role(GroupRole.MEMBER)
                 .build();
             groupMemberRepository.save(member);
+            addedUsers.add(user);
         }
+        return addedUsers;
     }
 
     private void assertMember(Long groupId, Long userId) {
@@ -816,6 +838,48 @@ public class GroupChatServiceImpl implements GroupChatService {
         event.setTargetUserId(targetUserId);
         event.setMessage(message);
         messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/group-events", event);
+    }
+
+    private void sendGroupAddedEvents(GroupChat groupChat, List<User> addedUsers, Long actorUserId, String actorName) {
+        if (groupChat == null || addedUsers == null || addedUsers.isEmpty() || actorUserId == null) {
+            return;
+        }
+
+        String displayActorName = actorName == null || actorName.isBlank() ? "Someone" : actorName;
+        String groupName = groupChat.getGroupName() == null || groupChat.getGroupName().isBlank()
+            ? "group chat"
+            : groupChat.getGroupName();
+
+        for (User addedUser : addedUsers) {
+            if (addedUser == null || addedUser.getUsername() == null || addedUser.getUsername().isBlank()) {
+                continue;
+            }
+            GroupRealtimeEventResponse event = new GroupRealtimeEventResponse();
+            event.setType("GROUP_ADDED");
+            event.setGroupId(groupChat.getId());
+            event.setGroup(toGroupResponse(groupChat, addedUser.getId()));
+            event.setActorUserId(actorUserId);
+            event.setTargetUserId(addedUser.getId());
+            event.setMessage(displayActorName + " added you to " + groupName + ".");
+            messagingTemplate.convertAndSendToUser(addedUser.getUsername(), "/queue/group-events", event);
+        }
+    }
+
+    private void runAfterCommitOrNow(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()
+            && TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+            return;
+        }
+        action.run();
     }
 
     private void notifyMentionedMembers(GroupChat groupChat, GroupMessage message, User actor) {

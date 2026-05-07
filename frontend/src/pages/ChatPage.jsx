@@ -49,6 +49,7 @@ import { API_BASE_URL } from "../config/appConfig";
 const CHAT_MODE_STORAGE_KEY = "chatapp_mode";
 const CHAT_SELECTED_PRIVATE_STORAGE_KEY = "chatapp_selected_private_user_id";
 const CHAT_SELECTED_GROUP_STORAGE_KEY = "chatapp_selected_group_id";
+const GROUP_ADDED_HINTS_STORAGE_KEY = "chatapp_group_added_hints";
 
 function unwrap(response) {
   return response?.data?.data ?? response?.data ?? [];
@@ -73,6 +74,29 @@ function toStoredNumber(value) {
   if (value == null || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function loadGroupAddedHints() {
+  if (typeof window === "undefined") {
+    return {};
+  }
+  try {
+    const raw = localStorage.getItem(GROUP_ADDED_HINTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const normalized = {};
+    Object.entries(parsed).forEach(([key, value]) => {
+      const id = toGroupId(key);
+      const text = typeof value === "string" ? value.trim() : "";
+      if (id && text) {
+        normalized[id] = text;
+      }
+    });
+    return normalized;
+  } catch {
+    return {};
+  }
 }
 
 function sameMessageId(a, b) {
@@ -300,6 +324,7 @@ export default function ChatPage() {
   const [pendingPrivateChatMember, setPendingPrivateChatMember] = useState(null);
   const [privateChatConfirmReady, setPrivateChatConfirmReady] = useState(false);
   const [groupRealtimeAlerts, setGroupRealtimeAlerts] = useState({});
+  const [groupAddedHints, setGroupAddedHints] = useState(loadGroupAddedHints);
   const [selectedWallpaperId, setSelectedWallpaperId] = useState(() => {
     const saved = localStorage.getItem(CHAT_WALLPAPER_STORAGE_KEY);
     return saved || DEFAULT_CHAT_WALLPAPER_ID;
@@ -378,6 +403,27 @@ export default function ChatPage() {
     });
   }, []);
 
+  const setGroupAddedHint = useCallback((groupId, text) => {
+    const key = toGroupId(groupId);
+    const message = String(text || "").trim();
+    if (!key || !message) return;
+    setGroupAddedHints((prev) => {
+      if (prev[key] === message) return prev;
+      return { ...prev, [key]: message };
+    });
+  }, []);
+
+  const clearGroupAddedHint = useCallback((groupId) => {
+    const key = toGroupId(groupId);
+    if (!key) return;
+    setGroupAddedHints((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     return () => {
       if (realtimeToastTimerRef.current) {
@@ -410,12 +456,46 @@ export default function ChatPage() {
   }, [selectedGroupId]);
 
   useEffect(() => {
+    const keys = Object.keys(groupAddedHints);
+    if (keys.length === 0) {
+      localStorage.removeItem(GROUP_ADDED_HINTS_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(GROUP_ADDED_HINTS_STORAGE_KEY, JSON.stringify(groupAddedHints));
+  }, [groupAddedHints]);
+
+  useEffect(() => {
     if (mode !== "group" || !selectedGroupId) return;
-    clearGroupRealtimeAlert(selectedGroupId);
-  }, [mode, selectedGroupId, clearGroupRealtimeAlert]);
+    setGroupRealtimeAlerts((prev) => {
+      const key = toGroupId(selectedGroupId);
+      if (!key || !prev[key]) return prev;
+      if ((prev[key].kind || "").toLowerCase() === "added") {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, [mode, selectedGroupId]);
 
   useEffect(() => {
     setGroupRealtimeAlerts((prev) => {
+      const keys = new Set(groups.map((group) => toGroupId(group.id)).filter(Boolean));
+      let changed = false;
+      const next = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        if (!keys.has(key)) {
+          changed = true;
+          return;
+        }
+        next[key] = value;
+      });
+      return changed ? next : prev;
+    });
+  }, [groups]);
+
+  useEffect(() => {
+    setGroupAddedHints((prev) => {
       const keys = new Set(groups.map((group) => toGroupId(group.id)).filter(Boolean));
       let changed = false;
       const next = {};
@@ -633,6 +713,19 @@ export default function ChatPage() {
           return;
         }
 
+        if (event.type === "GROUP_ADDED") {
+          const isTargeted = event.targetUserId != null;
+          if (isTargeted && Number(event.targetUserId) !== Number(auth.user?.id)) {
+            return;
+          }
+          if (isTargeted && Number(event.actorUserId) !== Number(auth.user?.id)) {
+            const message = event.message || "You were added to this group.";
+            setGroupRealtimeAlert(event.groupId, "added", message);
+            setGroupAddedHint(event.groupId, message);
+            showRealtimeToast(message);
+          }
+        }
+
         if (event.type === "MENTION") {
           if (event.targetUserId && Number(event.targetUserId) !== Number(auth.user?.id)) {
             return;
@@ -654,7 +747,9 @@ export default function ChatPage() {
         if (event.group) {
           setGroups((prev) => mergeGroups(upsertGroup(prev, event.group)));
         }
-        if (sameGroupId(event.groupId, selectedGroupIdRef.current)) {
+        // GROUP_UPDATED / GROUP_ADDED already include fresh group payload.
+        // Avoid immediate refetch race against just-committed updates.
+        if (sameGroupId(event.groupId, selectedGroupIdRef.current) && !event.group) {
           refreshGroup(event.groupId).catch(() => {});
         }
       },
@@ -663,7 +758,7 @@ export default function ChatPage() {
     });
 
     return () => socketClient.disconnect();
-  }, [auth.token, auth.user?.id, clearGroupRealtimeAlert, setGroupRealtimeAlert, showRealtimeToast]);
+  }, [auth.token, auth.user?.id, clearGroupRealtimeAlert, setGroupRealtimeAlert, setGroupAddedHint, showRealtimeToast]);
 
   useEffect(() => {
     groups.forEach((group) => {
@@ -702,6 +797,7 @@ export default function ChatPage() {
               };
             }))
           );
+          clearGroupAddedHint(groupId);
 
           if (!isActiveOpenGroup) {
             return;
@@ -775,7 +871,7 @@ export default function ChatPage() {
         }
       );
     });
-  }, [groups, selectedGroupId, auth.user?.id, auth.user?.username, clearGroupRealtimeAlert, setGroupRealtimeAlert, showRealtimeToast]);
+  }, [groups, selectedGroupId, auth.user?.id, auth.user?.username, clearGroupAddedHint, clearGroupRealtimeAlert, setGroupRealtimeAlert, showRealtimeToast]);
 
   useEffect(() => {
     const loadPrivate = async () => {
@@ -808,6 +904,10 @@ export default function ChatPage() {
         const response = await getGroupMessages(selectedGroupId);
         const list = unwrap(response).map((message) => normalizeGroupMessage(message, auth.user?.id));
         setMessages(list);
+        if (list.length > 0) {
+          clearGroupRealtimeAlert(selectedGroupId);
+          clearGroupAddedHint(selectedGroupId);
+        }
         const latestMessage = list.length > 0 ? list[list.length - 1] : null;
         setGroups((prev) =>
           mergeGroups(prev.map((group) => {
@@ -841,7 +941,7 @@ export default function ChatPage() {
     };
 
     loadGroup();
-  }, [selectedGroupId, mode, auth.user?.id]);
+  }, [selectedGroupId, mode, auth.user?.id, clearGroupAddedHint, clearGroupRealtimeAlert]);
 
   const filteredConversations = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -1059,6 +1159,22 @@ export default function ChatPage() {
       : activeGroup?.groupImageUrl || ""
   );
   const canComposeMessage = mode === "private" ? Boolean(selectedPrivateUserId) : Boolean(selectedGroupId);
+  const currentGroupKey = toGroupId(selectedGroupId);
+  const persistedAddedHint = currentGroupKey ? (groupAddedHints[currentGroupKey] || "").trim() : "";
+  const groupEmptyLabel = useMemo(() => {
+    const alertKind = (activeGroup?.mentionAlertKind || "").toLowerCase();
+    if (alertKind === "added") {
+      const text = (activeGroup?.mentionAlertText || "").trim();
+      return text || "You were added to this group.";
+    }
+    if (persistedAddedHint) {
+      return persistedAddedHint;
+    }
+    if (activeGroup && Number(activeGroup.createdById) !== Number(auth.user?.id)) {
+      return "You were added to this group.";
+    }
+    return "No group messages yet.";
+  }, [activeGroup, persistedAddedHint, auth.user?.id]);
 
   const sendTyping = (value) => {
     if (mode === "private" && selectedPrivateUserId) {
@@ -1747,7 +1863,7 @@ export default function ChatPage() {
             messages={preparedMessages}
             showSender={mode === "group"}
             mentionUsername={mode === "group" ? auth.user?.username || "" : ""}
-            emptyLabel={mode === "private" ? "No messages yet." : "No group messages yet."}
+            emptyLabel={mode === "private" ? "No messages yet." : groupEmptyLabel}
             onDeleteForMe={mode === "private" ? handleDeleteForMe : mode === "group" ? handleDeleteOwnGroupMessage : undefined}
             onDeleteForEveryone={mode === "private" ? handleDeleteForEveryone : undefined}
             onVotePoll={mode === "group" ? handleVotePoll : undefined}
