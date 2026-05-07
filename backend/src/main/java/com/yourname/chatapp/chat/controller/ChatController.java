@@ -15,14 +15,15 @@ import java.util.List;
 public class ChatController {
     private final ChatService chatService;
 
+    // Creates a chat room.
     @PostMapping
     public ResponseEntity<Chat> create(@RequestBody ChatRequest request) {
         return ResponseEntity.ok(chatService.create(request));
     }
 
+    // Returns all chat rooms.
     @GetMapping
     public ResponseEntity<List<Chat>> getAll() {
         return ResponseEntity.ok(chatService.getAll());
     }
 }
-

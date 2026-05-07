@@ -4,5 +4,5 @@ import com.yourname.chatapp.notification.entity.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
+    void deleteAllByUserId(Long userId);
 }
-

@@ -9,14 +9,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/media")
+@RequestMapping({"/api/media", "/api/messages/media"})
 @RequiredArgsConstructor
 public class MediaController {
     private final MediaService mediaService;
 
+    // Returns uploaded media metadata list.
     @GetMapping
     public ResponseEntity<List<MediaFile>> getAll() {
         return ResponseEntity.ok(mediaService.getAll());
     }
 }
-

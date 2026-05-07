@@ -12,10 +12,10 @@ import org.springframework.stereotype.Controller;
 public class WebSocketChatController {
     private final WebSocketService webSocketService;
 
+    // Broadcasts incoming legacy WebSocket message to /topic/messages.
     @MessageMapping("/chat.send")
     @SendTo("/topic/messages")
     public MessageEvent send(MessageEvent event) {
         return webSocketService.processIncomingMessage(event);
     }
 }
-
