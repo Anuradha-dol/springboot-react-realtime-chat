@@ -1,5 +1,5 @@
 import api from "./axios";
 
-export const getMessagesByChat = (chatId) => api.get(`/messages/chat/${chatId}`);
-export const sendMessage = (payload) => api.post("/messages", payload);
-
+// Legacy chat-room message endpoints keep /messages and add /chats/messages alias.
+export const getMessagesByChat = (chatId) => api.get(`/chats/messages/${chatId}`);
+export const sendMessage = (payload) => api.post("/chats/messages", payload);

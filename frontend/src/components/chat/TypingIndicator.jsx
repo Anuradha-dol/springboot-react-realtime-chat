@@ -1,4 +1,7 @@
 export default function TypingIndicator({ visible }) {
-  return visible ? <p>Typing...</p> : null;
+  return (
+    <div className="typing-row">
+      {visible ? <p className="typing-indicator">Typing...</p> : <p className="typing-indicator placeholder">.</p>}
+    </div>
+  );
 }
-
