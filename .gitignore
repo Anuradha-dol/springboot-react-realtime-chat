@@ -1,0 +1,26 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+!.idea/.gitignore
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+
+# Logs
+*.log
+backend/*.log
+frontend/*.log
+
+# Java / Maven
+backend/target/
+*.class
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/.vite/
+
+# Runtime uploads / generated files
+uploads/
+backend/uploads/
