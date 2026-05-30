@@ -634,8 +634,12 @@ export default function ChatPage() {
     socketClient.connect({
       token,
       onPrivateMessage: (incoming) => {
+        const currentUserId = auth.user?.id;
+        const incomingMine = currentUserId != null && Number(incoming.senderId) === Number(currentUserId);
+        const incomingWithMine = { ...incoming, mine: incomingMine };
+
         setConversations((prev) => {
-          const otherUserId = incoming.senderId === auth.user?.id ? incoming.receiverId : incoming.senderId;
+          const otherUserId = incomingMine ? incoming.receiverId : incoming.senderId;
           const privatePreview = messagePreviewText(incoming);
           const next = [...prev];
           const index = next.findIndex((item) => item.userId === otherUserId);
@@ -645,7 +649,7 @@ export default function ChatPage() {
             userId: otherUserId,
             lastMessage: privatePreview,
             lastMessageAt: timeLabel(incoming.createdAt),
-            unread: incoming.receiverId === auth.user?.id && !incoming.mine
+            unread: currentUserId != null && Number(incoming.receiverId) === Number(currentUserId) && !incomingMine
           };
           if (index >= 0) {
             next.splice(index, 1);
@@ -657,15 +661,15 @@ export default function ChatPage() {
         });
 
         const isSelected =
-          (incoming.senderId === selectedPrivateUserIdRef.current && incoming.receiverId === auth.user?.id) ||
-          (incoming.receiverId === selectedPrivateUserIdRef.current && incoming.senderId === auth.user?.id);
+          (Number(incoming.senderId) === Number(selectedPrivateUserIdRef.current) && Number(incoming.receiverId) === Number(currentUserId)) ||
+          (Number(incoming.receiverId) === Number(selectedPrivateUserIdRef.current) && Number(incoming.senderId) === Number(currentUserId));
 
         if (isSelected) {
-          const normalizedIncoming = normalizePrivateMessage(incoming);
+          const normalizedIncoming = normalizePrivateMessage(incomingWithMine, currentUserId);
           setMessages((prev) => {
             return upsertMessage(prev, normalizedIncoming);
           });
-          if (!incoming.mine && incoming.receiverId === auth.user?.id) {
+          if (!incomingMine && currentUserId != null && Number(incoming.receiverId) === Number(currentUserId)) {
             markPrivateMessageRead(incoming.id).catch(() => {});
           }
         }
@@ -879,7 +883,7 @@ export default function ChatPage() {
       try {
         setLoading(true);
         const response = await getPrivateMessages(selectedPrivateUserId);
-        const list = unwrap(response).map(normalizePrivateMessage);
+        const list = unwrap(response).map((message) => normalizePrivateMessage(message, auth.user?.id));
         setMessages(list);
         await Promise.all(
           list
@@ -894,7 +898,7 @@ export default function ChatPage() {
     };
 
     loadPrivate();
-  }, [selectedPrivateUserId, mode]);
+  }, [selectedPrivateUserId, mode, auth.user?.id]);
 
   useEffect(() => {
     const loadGroup = async () => {
@@ -1252,7 +1256,7 @@ export default function ChatPage() {
           content: text,
           replyToMessageId: activeReplyId
         });
-        const saved = normalizePrivateMessage(unwrap(response));
+        const saved = normalizePrivateMessage(unwrap(response), auth.user?.id);
         setMessages((prev) => upsertMessage(prev, saved));
         setReplyTarget(null);
       } else if (mode === "group" && selectedGroupId) {
@@ -2071,7 +2075,7 @@ export default function ChatPage() {
   );
 }
 
-function normalizePrivateMessage(message) {
+function normalizePrivateMessage(message, currentUserId) {
   return {
     ...message,
     id: toMessageId(message.id),
@@ -2086,7 +2090,7 @@ function normalizePrivateMessage(message) {
     replyToSenderName: message.replyToSenderName,
     replyToMessageType: message.replyToMessageType,
     replyToContent: message.replyToContent,
-    mine: Boolean(message.mine),
+    mine: currentUserId != null && Number(message.senderId) === Number(currentUserId),
     read: Boolean(message.read),
     createdAt: message.createdAt
   };
@@ -2108,7 +2112,7 @@ function normalizeGroupMessage(message, currentUserId) {
     replyToContent: message.replyToContent,
     poll: message.poll || null,
     seenBy: Array.isArray(message.seenBy) ? message.seenBy : [],
-    mine: message.senderId === currentUserId,
+    mine: currentUserId != null && Number(message.senderId) === Number(currentUserId),
     read: true,
     createdAt: message.createdAt
   };
