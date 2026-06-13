@@ -24,3 +24,6 @@ frontend/node_modules/.vite/
 # Runtime uploads / generated files
 uploads/
 backend/uploads/
+
+# Local exported copy; committed documentation lives in docs/project-overview.pdf
+Real_Time_Chat_SpringBoot_WebSocket_Annotated_Portfolio_FIXED_13pages.pdf
