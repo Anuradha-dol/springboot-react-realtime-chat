@@ -7,6 +7,7 @@ import { store } from "./store/store";
 import "./styles/variables.css";
 import "./styles/index.css";
 import "./styles/chat.css";
+import "./styles/landing.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -17,4 +18,3 @@ createRoot(document.getElementById("root")).render(
     </Provider>
   </StrictMode>
 );
-

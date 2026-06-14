@@ -10,6 +10,7 @@ import ChatPage from "../pages/ChatPage";
 import ProfilePage from "../pages/ProfilePage";
 import EditProfilePage from "../pages/EditProfilePage";
 import ViewProfilePage from "../pages/ViewProfilePage";
+import LandingPage from "../pages/LandingPage";
 import Settings from "../features/settings/pages/Settings";
 
 export default function AppRoutes() {
@@ -17,7 +18,7 @@ export default function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={isAuthenticated ? "/chats" : "/login"} replace />} />
+      <Route path="/" element={isAuthenticated ? <Navigate to="/chats" replace /> : <LandingPage />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/chats" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/chats" replace /> : <Register />} />
       {/* Auth recovery routes stay public. */}

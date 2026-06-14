@@ -8,11 +8,17 @@ This is my individual full-stack project that I built to practice real applicati
 
 I kept the project focused on features that usually appear in production-style applications: REST APIs, layered backend structure, JWT-based security, PostgreSQL persistence, WebSocket events, frontend protected routes, and reusable UI components. The project is not just a static chat UI; the frontend, backend, database, authentication, and real-time layers are connected together.
 
-## Project Overview Document
+## Project Report and UI Preview
 
-I also created a detailed project overview PDF that includes UI screenshots, feature explanations, system flow, and technical implementation details.
+I also created separate PDF artifacts for the written project report and the new PulseChat landing page UI screenshot.
 
-📄 [View Full Project Overview PDF](./docs/project-overview.pdf)
+- [View Project Report PDF](./docs/project-report.pdf)
+- [View Landing Page UI Screenshot PDF](./docs/pulsechat-ui-screenshot.pdf)
+- [View Full Project Overview PDF](./docs/project-overview.pdf)
+
+### PulseChat Landing Page
+
+![PulseChat landing page UI](./docs/landing-page-ui.png)
 
 ## Tech Stack
 
@@ -203,22 +209,25 @@ jwt-websocket-chat-app/
 |   |-- index.html
 |   |-- src/
 |   |   |-- api/               # Axios client and API wrappers
-|   |   |-- assets/            # Chat wallpaper assets
+|   |   |-- assets/            # Chat wallpaper and landing page assets
 |   |   |-- components/        # Chat, group, common, and layout components
 |   |   |-- config/            # API and WebSocket base URL config
 |   |   |-- context/           # Auth and socket contexts
 |   |   |-- features/          # Auth, chat, profile, and settings feature folders
 |   |   |-- hooks/             # Custom hooks
-|   |   |-- pages/             # Chat, profile, edit profile, view profile pages
+|   |   |-- pages/             # Landing, chat, profile, edit profile, view profile pages
 |   |   |-- routes/            # React Router route setup
 |   |   |-- services/          # Frontend service wrappers for chat/group/profile APIs
 |   |   |-- store/             # Redux store
-|   |   |-- styles/            # Global and chat CSS
+|   |   |-- styles/            # Global, chat, and landing CSS
 |   |   |-- utils/             # Validators and formatting helpers
 |   |   |-- websocket/         # STOMP/SockJS client
 |
 |-- docs/
 |   |-- project-overview.pdf
+|   |-- project-report.pdf
+|   |-- pulsechat-ui-screenshot.pdf
+|   |-- landing-page-ui.png
 |
 |-- uploads/                  # Local runtime uploads when app is run from repo root
 |-- .gitignore
@@ -518,13 +527,17 @@ If `VITE_API_BASE_URL` is not set, the frontend falls back to the current hostna
 
 ## UI Screenshots
 
-The full UI walkthrough with screenshots and feature explanations is available in the project overview PDF.
+The new PulseChat landing page UI is shown below, and the screenshot is also available as a separate PDF.
 
-📄 [View Full Project Overview PDF](./docs/project-overview.pdf)
+![PulseChat landing page UI](./docs/landing-page-ui.png)
+
+- [View Landing Page UI Screenshot PDF](./docs/pulsechat-ui-screenshot.pdf)
+- [View Project Report PDF](./docs/project-report.pdf)
+- [View Full Project Overview PDF](./docs/project-overview.pdf)
 
 ## Project Documentation PDF Explanation
 
-The PDF document includes the complete project overview, UI screens, feature explanations, workflow details, and technical implementation notes. I kept the README focused on the technical setup, architecture, APIs, and security notes, while the PDF gives a more visual explanation of how the full system works.
+The PDF documents include the written project report, the new landing page UI screenshot, and the existing full project overview with UI screens, feature explanations, workflow details, and technical implementation notes. I kept the README focused on the technical setup, architecture, APIs, and security notes, while the PDFs provide report and visual walkthrough material.
 
 ## Challenges & What I Learned
 
