@@ -8,9 +8,9 @@ This is my individual full-stack project that I built to practice real applicati
 
 I kept the project focused on features that usually appear in production-style applications: REST APIs, layered backend structure, JWT-based security, PostgreSQL persistence, WebSocket events, frontend protected routes, and reusable UI components. The project is not just a static chat UI; the frontend, backend, database, authentication, and real-time layers are connected together.
 
-## Project Report and UI Preview
+## Project Report and Screenshots
 
-I also created separate PDF artifacts for the written project report and the new PulseChat landing page UI screenshot.
+I added a project report PDF and a PDF copy of the current landing page screenshot. The older full overview PDF is also linked here because it includes the longer UI walkthrough and feature notes.
 
 - [View Project Report PDF](./docs/project-report.pdf)
 - [View Landing Page UI Screenshot PDF](./docs/pulsechat-ui-screenshot.pdf)
@@ -527,7 +527,7 @@ If `VITE_API_BASE_URL` is not set, the frontend falls back to the current hostna
 
 ## UI Screenshots
 
-The new PulseChat landing page UI is shown below, and the screenshot is also available as a separate PDF.
+This is the current PulseChat landing page. I also kept a PDF version of the screenshot for report/submission use.
 
 ![PulseChat landing page UI](./docs/landing-page-ui.png)
 
@@ -537,7 +537,7 @@ The new PulseChat landing page UI is shown below, and the screenshot is also ava
 
 ## Project Documentation PDF Explanation
 
-The PDF documents include the written project report, the new landing page UI screenshot, and the existing full project overview with UI screens, feature explanations, workflow details, and technical implementation notes. I kept the README focused on the technical setup, architecture, APIs, and security notes, while the PDFs provide report and visual walkthrough material.
+The PDFs are mainly included for project report and presentation purposes. The README stays focused on the setup steps, architecture, APIs, security notes, and the main features of the application.
 
 ## Challenges & What I Learned
 
