@@ -2,9 +2,8 @@
 .DS_Store
 Thumbs.db
 .idea/
-!.idea/.gitignore
-!.idea/codeStyles/
-!.idea/inspectionProfiles/
+.vscode/
+*.iml
 
 # Logs
 *.log
@@ -24,6 +23,17 @@ frontend/node_modules/.vite/
 # Runtime uploads / generated files
 uploads/
 backend/uploads/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # Local exported copy; committed documentation lives in docs/project-overview.pdf
 Real_Time_Chat_SpringBoot_WebSocket_Annotated_Portfolio_FIXED_13pages.pdf
