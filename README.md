@@ -13,8 +13,7 @@ I kept the project focused on features that usually appear in production-style a
 I added a project report PDF and a PDF copy of the current landing page screenshot. The older full overview PDF is also linked here because it includes the longer UI walkthrough and feature notes.
 
 - [View Project Report PDF](./docs/project-report.pdf)
-- [View Landing Page UI Screenshot PDF](./docs/pulsechat-ui-screenshot.pdf)
-- [View Full Project Overview PDF](./docs/project-overview.pdf)
+- [View Full Project Overview_and_UI_Screenshorts PDF](./docs/project-overview.pdf)
 
 ### PulseChat Landing Page
 
