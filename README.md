@@ -14,6 +14,7 @@ I added a project report PDF and a PDF copy of the current landing page screensh
 
 - [View Project Report PDF](./docs/project-report.pdf)
 - [View Full Project Overview_and_UI_Screenshorts PDF](./docs/project-overview.pdf)
+- [PulseChat landing page UI](./docs/landing-page-ui.png)
 
 ### PulseChat Landing Page
 
